@@ -1,9 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useProductsStore } from '../store/Store';
 
 const Profile = () => {
-  const { user, fetchUser, fetchPreviousOrders, fetchCurrentOrderStatus, error, isAuthenticated } = useProductsStore();
+  const {
+    user,
+    fetchUser,
+    fetchPreviousOrders,
+    fetchCurrentOrderStatus,
+    login,
+    isAuthenticated,
+    error,
+  } = useProductsStore();
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const navigate = useNavigate();
 
@@ -16,8 +24,19 @@ const Profile = () => {
           await fetchCurrentOrderStatus();
           setIsDataLoaded(true);
         } else {
-          // Redirect to the login page if not authenticated
-          navigate('/login'); // Adjust the route to your login page
+          // Attempt to login with a default user (you may need to replace this with actual default credentials)
+          const defaultLoginCredentials = {
+            email: 'default@example.com',
+            password: 'password123',
+          };
+          await login(defaultLoginCredentials);
+
+          // Redirect to the signup page if the login attempt fails
+          if (!isAuthenticated) {
+            navigate('/signup');
+          }
+
+          setIsDataLoaded(true);
         }
       } catch (error) {
         // Handle errors
@@ -27,7 +46,7 @@ const Profile = () => {
     };
 
     fetchData();
-  }, [isAuthenticated, navigate]); // Fetch data on component mount
+  }, [isAuthenticated, navigate, login]); // Fetch data on component mount
 
   if (!isDataLoaded) {
     return (
@@ -72,6 +91,15 @@ const Profile = () => {
           <h3 className="pending-order-title">Pending Order</h3>
           <p className="order-status">Current Order Status: {user.currentOrderStatus}</p>
         </>
+      )}
+
+      {!isAuthenticated && (
+        <div className="signup-message">
+          <p>
+            Your login attempt failed. If you are a new user,{' '}
+            <Link to="/Signup">sign up here</Link>.
+          </p>
+        </div>
       )}
     </div>
   );
