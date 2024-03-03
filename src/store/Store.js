@@ -13,33 +13,30 @@ const initialState = {
     previousOrders: [],
     currentOrderStatus: null,
   },
-  isAuthenticated: false, // New state for tracking authentication status
+  isAuthenticated: false,
 };
 
 export const useProductsStore = create((set) => ({
   ...initialState,
+  syncCartWithLocalStorage: () => {
+    const localCart = JSON.parse(localStorage.getItem('cart') || '[]');
+    set((state) => ({ ...state, cart: localCart }));
+  },
   setProducts: (products) => set((state) => ({ ...state, products })),
   setSelectedProductId: (id) => set((state) => ({ ...state, selectedProductId: id })),
   addToCart: (product, previousCart) => set((state) => {
-    const existingItemIndex = (previousCart || state.cart).findIndex((item) => item.id === product.id);
+    const currentCart = state.cart;
 
-    if (existingItemIndex !== -1) {
-      const updatedCart = (previousCart || state.cart).map((item) =>
-        item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-      );
+    const updatedState = {
+      ...state,
+      ...(typeof window !== 'undefined' && {
+        cart: currentCart.map((item) => state.addToCart(item, previousCart)),
+      }),
+    };
 
-      return {
-        ...state,
-        cart: updatedCart,
-        productsInCart: updatedCart.reduce((acc, item) => acc + item.quantity, 0),
-      };
-    } else {
-      return {
-        ...state,
-        cart: [...(previousCart || state.cart), { ...product, quantity: 1 }],
-        productsInCart: (previousCart || state.cart).reduce((acc, item) => acc + item.quantity, 0) + 1,
-      };
-    }
+    localStorage.setItem('cart', JSON.stringify(updatedState.cart));
+
+    return updatedState;
   }),
   removeFromCart: (productId) => set((state) => ({
     ...state,
@@ -86,23 +83,34 @@ export const useProductsStore = create((set) => ({
       },
       body: JSON.stringify({ email, password }),
     });
-
+  
     if (response.ok) {
       const userData = await response.json();
       const previousCartResponse = await fetch(`/api/user/${userData.id}/cart`);
       const previousCart = await previousCartResponse.json();
-
-      set((state) => ({
-        ...state,
-        user: userData,
-        userId: userData.id,
-        isAuthenticated: true,
-        cart: state.cart.map((product) => state.addToCart(product, previousCart)),
-      }));
+  
+      set((state) => {
+        const updatedState = {
+          ...state,
+          user: userData,
+          userId: userData.id,
+          isAuthenticated: true,
+          cart: state.cart.map((product) => state.addToCart(product, previousCart)),
+        };
+  
+        // Synchronize cart with local storage on login
+        updatedState.syncCartWithLocalStorage();
+  
+        // Clear local storage after synchronization
+        localStorage.removeItem('cart');
+  
+        return updatedState;
+      });
     } else {
       throw new Error('Login failed');
     }
   },
+  
   signup: async ({ name, email, password }) => {
     const response = await fetch('/api/signup', {
       method: 'POST',
