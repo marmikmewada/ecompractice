@@ -14,6 +14,8 @@ const initialState = {
     currentOrderStatus: null,
   },
   isAuthenticated: false,
+  categories: [],
+  searchResults:null,
 };
 
 export const useProductsStore = create((set) => ({
@@ -24,25 +26,116 @@ export const useProductsStore = create((set) => ({
   },
   setProducts: (products) => set((state) => ({ ...state, products })),
   setSelectedProductId: (id) => set((state) => ({ ...state, selectedProductId: id })),
-  addToCart: (product, previousCart) => set((state) => {
-    const currentCart = state.cart;
 
-    const updatedState = {
-      ...state,
-      ...(typeof window !== 'undefined' && {
-        cart: currentCart.map((item) => state.addToCart(item, previousCart)),
-      }),
-    };
+  addToCart: (product) => set((state) => {
+    const existingProductIndex = state.cart.findIndex(item => item.id === product.id);
 
-    localStorage.setItem('cart', JSON.stringify(updatedState.cart));
+    if (existingProductIndex !== -1) {
+        // If the product is already in the cart, update its quantity
+        const updatedCart = state.cart.map((item, index) => {
+            if (index === existingProductIndex) {
+                return { ...item, quantity: item.quantity + 1 };
+            }
+            return item;
+        });
 
-    return updatedState;
-  }),
-  removeFromCart: (productId) => set((state) => ({
+        return {
+            ...state,
+            cart: updatedCart,
+            productsInCart: state.productsInCart + 1,
+        };
+    } else {
+        // If the product is not in the cart, add it with quantity 1
+        return {
+            ...state,
+            cart: [...state.cart, { ...product, quantity: 1 }],
+            productsInCart: state.productsInCart + 1,
+        };
+    }
+}),
+
+// search: (searchTerm) => set((state) => {
+//   const filteredProducts = state.products.filter((product) =>
+//     product.name.toLowerCase().includes(searchTerm.toLowerCase())
+//   );
+
+//   return {
+//     ...state,
+//     searchResults: filteredProducts,
+//   };
+// }),
+
+// clearSearchResults: () => set((state) => ({
+//   ...state,
+//   searchResults: [],
+// })),
+
+// search: (searchTerm) => set((state) => {
+//   const filteredProducts = state.products.filter((product) =>
+//     product.name.toLowerCase().includes(searchTerm.toLowerCase())
+//   );
+
+//   // Clear search results before setting new ones
+//   state.clearSearchResults(); // Call `clearSearchResults` after filtering
+
+//   return {
+//     ...state,
+//     searchResults: filteredProducts,
+//   };
+// }),
+
+// search: (searchTerm) => set((state) => {
+//   const filteredProducts = state.products.filter((product) =>
+//     product.name.toLowerCase().includes(searchTerm.toLowerCase())
+//   );
+
+//   // Clear search results before setting new ones
+//   set((state) => ({ ...state, searchResults: [] }));
+
+//   return {
+//     ...state,
+//     searchResults: filteredProducts,
+//   };
+// }),
+search: (searchTerm) => set((state) => {
+  const filteredProducts = state.products.filter((product) =>
+    product.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return {
     ...state,
-    cart: state.cart.filter((item) => item.id !== productId),
-    productsInCart: state.cart.reduce((acc, item) => acc + item.quantity, 0),
-  })),
+    searchResults: filteredProducts,
+  };
+}),
+
+
+removeFromCart: (productId) => set((state) => {
+  const updatedCart = state.cart.reduce((acc, item) => {
+      if (item.id === productId) {
+          if (item.quantity > 1) {
+              acc.push({ ...item, quantity: item.quantity - 1 });
+          }
+          // If quantity is 1, don't include the item in the updated cart
+      } else {
+          acc.push(item);
+      }
+      return acc;
+  }, []);
+
+  const updatedProductsInCart = updatedCart.reduce((acc, item) => acc + item.quantity, 0);
+
+  return {
+      ...state,
+      cart: updatedCart,
+      productsInCart: updatedProductsInCart,
+  };
+}),
+
+
+  
+  
+
+
   setCart: (newCart) => set((state) => ({ ...state, cart: newCart })),
   emptyCart: () => set((state) => ({
     ...state,
@@ -127,4 +220,17 @@ export const useProductsStore = create((set) => ({
       throw new Error('Signup failed');
     }
   },
+  getFilteredProducts: (searchTerm, selectedCategoryId) => set((state) => {
+    // Derive filtered products based on search term and category
+    const filteredProducts = state.products.filter((product) => {
+      const searchTermMatch =
+        product.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const categoryMatch = !selectedCategoryId || product.category === selectedCategoryId;
+  
+      return searchTermMatch && categoryMatch;
+    });
+  
+    // Return the filtered products as a separate state value
+    return filteredProducts;
+  }),
 }));

@@ -7,7 +7,7 @@ const Navbar = () => {
 
   useEffect(() => {
     // Re-render the component whenever productsInCart changes
-    console.log(productsInCart);
+    // console.log(productsInCart);
   }, [productsInCart]);
 
   return (

@@ -36,7 +36,10 @@ const Cart = () => {
               <p>Price: {item.price}</p>
               <div className='quantity-controls'>
                 <button
-                  onClick={() => removeFromCart(item.id)}
+                  onClick={() => {
+                    console.log("Removing from cart:", item.id);
+                    removeFromCart(item.id);
+                  }}
                   disabled={item.quantity === 1} // Disable "Remove" for quantity 1
                   className='quantity-button'
                 >
@@ -56,12 +59,11 @@ const Cart = () => {
       </button>
       {/* Add the checkout button */}
       <Link to={'/Checkout'}>
-      <button onClick={handleCheckout} className='checkout-button'>
-        Checkout (Coming Soon)
-      </button>
+        <button onClick={handleCheckout} className='checkout-button'>
+          Checkout (Coming Soon)
+        </button>
       </Link>
     </div>
   );
 };
-
 export default Cart;
